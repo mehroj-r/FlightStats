@@ -1,0 +1,368 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airport Statistics Dashboard</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Airport Statistics Dashboard</h1>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label for="departure-airport">Departure Airport</label>
+                <select id="departure-airport">
+                    <option value="">All Airports</option>
+                    <!-- Will be populated via API -->
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="arrival-airport">Arrival Airport</label>
+                <select id="arrival-airport">
+                    <option value="">All Airports</option>
+                    <!-- Will be populated via API -->
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="from-date">From Date</label>
+                <input type="date" id="from-date">
+            </div>
+
+            <div class="filter-group">
+                <label for="to-date">To Date</label>
+                <input type="date" id="to-date">
+            </div>
+
+            <div class="filter-group" style="justify-content: flex-end;">
+                <button id="filter-btn" style="margin-top: auto;">Apply Filters</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">Loading data...</div>
+
+        <table id="airport-data">
+            <thead>
+                <tr>
+                    <th data-sort="departure_airport">Departure Airport <span class="sort-indicator"></span></th>
+                    <th data-sort="arrival_airport">Arrival Airport <span class="sort-indicator"></span></th>
+                    <th data-sort="distance_km">Distance (km) <span class="sort-indicator"></span></th>
+                    <th data-sort="flights_count">Flights <span class="sort-indicator"></span></th>
+                    <th data-sort="passengers_count">Passengers <span class="sort-indicator"></span></th>
+                    <th data-sort="flight_time">Flight Time <span class="sort-indicator"></span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Will be populated via API -->
+            </tbody>
+        </table>
+
+        <div class="pagination" id="pagination">
+            <!-- Will be populated via JS -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configuration
+            const API_BASE_URL = '/api/v1'; // Replace with your actual API base URL
+            let currentPage = 1;
+            let pageSize = 10;
+            let totalPages = 1;
+            let currentSortField = 'distance_km';
+            let currentSortOrder = 'asc';
+
+            // Initialize date inputs with current date range (last 30 days)
+            const today = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+
+            document.getElementById('to-date').value = formatDate(today);
+            document.getElementById('from-date').value = formatDate(thirtyDaysAgo);
+
+            // Fetch initial data
+            fetchAirportList();
+            fetchAirportData();
+
+            // Event listeners
+            document.getElementById('filter-btn').addEventListener('click', function() {
+                currentPage = 1;
+                fetchAirportData();
+            });
+
+            document.querySelectorAll('#airport-data th').forEach(th => {
+                th.addEventListener('click', function() {
+                    const sortField = this.getAttribute('data-sort');
+                    if (currentSortField === sortField) {
+                        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSortField = sortField;
+                        currentSortOrder = 'asc';
+                    }
+
+                    // Update sort indicators
+                    document.querySelectorAll('#airport-data th').forEach(header => {
+                        header.classList.remove('sort-asc', 'sort-desc');
+                    });
+
+                    this.classList.add(currentSortOrder === 'asc' ? 'sort-asc' : 'sort-desc');
+
+                    fetchAirportData();
+                });
+            });
+
+            // Function to fetch airport list for dropdowns
+            function fetchAirportList() {
+                fetch(`${API_BASE_URL}/airports/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const departureDropdown = document.getElementById('departure-airport');
+                        const arrivalDropdown = document.getElementById('arrival-airport');
+
+                        // Clear existing options except the first one
+                        departureDropdown.innerHTML = '<option value="">All Airports</option>';
+                        arrivalDropdown.innerHTML = '<option value="">All Airports</option>';
+
+                        // Add options for each airport
+                        data.forEach(airport => {
+                            const departureOption = document.createElement('option');
+                            departureOption.value = airport.airport_code;
+                            departureOption.textContent = airport.airport_name['en'];
+                            departureDropdown.appendChild(departureOption);
+
+                            const arrivalOption = document.createElement('option');
+                            arrivalOption.value = airport.airport_code;
+                            arrivalOption.textContent = airport.airport_name['en'];
+                            arrivalDropdown.appendChild(arrivalOption);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching airport list:', error);
+                    });
+            }
+
+            // Function to fetch airport data
+            function fetchAirportData() {
+                const departureAirport = document.getElementById('departure-airport').value;
+                const arrivalAirport = document.getElementById('arrival-airport').value;
+                const fromDate = document.getElementById('from-date').value;
+                const toDate = document.getElementById('to-date').value;
+
+                document.getElementById('loading').style.display = 'block';
+
+                // Construct request body with filters and pagination
+                const requestBody = {
+                    page: currentPage,
+                    page_size: pageSize,
+                    sort_field: currentSortField,
+                    sort_order: currentSortOrder,
+                    filters: {}
+                };
+
+                // Add filters only if they're set
+                if (departureAirport) {
+                    requestBody.filters.departure_airport = departureAirport;
+                }
+
+                if (arrivalAirport) {
+                    requestBody.filters.arrival_airport = arrivalAirport;
+                }
+
+                if (fromDate) {
+                    requestBody.filters.from_date = fromDate;
+                }
+
+                if (toDate) {
+                    requestBody.filters.to_date = toDate;
+                }
+
+                fetch(`${API_BASE_URL}/airport-statistics/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken() // Important for Django's CSRF protection
+                    },
+                    body: JSON.stringify(requestBody)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    renderAirportData(data.results);
+                    totalPages = Math.ceil(data.count / pageSize);
+                    renderPagination();
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error fetching airport data:', error);
+                    document.getElementById('loading').style.display = 'none';
+                    // For demo purposes, render sample data
+                    renderSampleData();
+                });
+            }
+
+            // Function to get CSRF token from cookies (for Django)
+            function getCsrfToken() {
+                const name = 'csrftoken';
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Function to render airport data
+            function renderAirportData(data) {
+                const tableBody = document.querySelector('#airport-data tbody');
+                tableBody.innerHTML = '';
+
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+
+                    const departureTd = document.createElement('td');
+                    departureTd.textContent = item.departure_airport;
+                    row.appendChild(departureTd);
+
+                    const arrivalTd = document.createElement('td');
+                    arrivalTd.textContent = item.arrival_airport;
+                    row.appendChild(arrivalTd);
+
+                    const distanceTd = document.createElement('td');
+                    distanceTd.textContent = item.distance_km.toFixed(2);
+                    row.appendChild(distanceTd);
+
+                    const flightsTd = document.createElement('td');
+                    flightsTd.textContent = item.flights_count;
+                    row.appendChild(flightsTd);
+
+                    const passengersTd = document.createElement('td');
+                    passengersTd.textContent = item.passengers_count.toLocaleString();
+                    row.appendChild(passengersTd);
+
+                    const timeTd = document.createElement('td');
+                    timeTd.textContent = item.flight_time;
+                    row.appendChild(timeTd);
+
+                    tableBody.appendChild(row);
+                });
+            }
+
+            // Function to render pagination
+            function renderPagination() {
+                const paginationDiv = document.getElementById('pagination');
+                paginationDiv.innerHTML = '';
+
+                // Previous button
+                const prevButton = document.createElement('button');
+                prevButton.textContent = 'Previous';
+                prevButton.disabled = currentPage === 1;
+                prevButton.addEventListener('click', function() {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        fetchAirportData();
+                    }
+                });
+                paginationDiv.appendChild(prevButton);
+
+                // Page buttons
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(totalPages, startPage + 4);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageButton = document.createElement('button');
+                    pageButton.textContent = i;
+                    if (i === currentPage) {
+                        pageButton.classList.add('active');
+                    }
+                    pageButton.addEventListener('click', function() {
+                        currentPage = i;
+                        fetchAirportData();
+                    });
+                    paginationDiv.appendChild(pageButton);
+                }
+
+                // Next button
+                const nextButton = document.createElement('button');
+                nextButton.textContent = 'Next';
+                nextButton.disabled = currentPage === totalPages;
+                nextButton.addEventListener('click', function() {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        fetchAirportData();
+                    }
+                });
+                paginationDiv.appendChild(nextButton);
+            }
+
+            // Helper function to format date as YYYY-MM-DD
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+
+            // For demo purposes - render sample data
+            function renderSampleData() {
+                const sampleData = [
+                    {
+                        departure_airport: 'Domodedovo International Airport',
+                        arrival_airport: 'Voronezh International Airport',
+                        distance_km: 345.77,
+                        flights_count: 393,
+                        passengers_count: 9085,
+                        flight_time: '00:35:00'
+                    },
+                    {
+                        departure_airport: 'Domodedovo International Airport',
+                        arrival_airport: 'Kursk East Airport',
+                        distance_km: 370.96,
+                        flights_count: 395,
+                        passengers_count: 8454,
+                        flight_time: '00:35:00'
+                    },
+                    {
+                        departure_airport: 'Domodedovo International Airport',
+                        arrival_airport: 'Belgorod International Airport',
+                        distance_km: 446.87,
+                        flights_count: 394,
+                        passengers_count: 24943,
+                        flight_time: '00:45:00'
+                    },
+                    {
+                        departure_airport: 'Domodedovo International Airport',
+                        arrival_airport: 'Bryansk Airport',
+                        distance_km: 459.77,
+                        flights_count: 786,
+                        passengers_count: 38045,
+                        flight_time: '00:30:00'
+                    },
+                    {
+                        departure_airport: 'Domodedovo International Airport',
+                        arrival_airport: 'Pulkovo Airport',
+                        distance_km: 942.00,
+                        flights_count: 791,
+                        passengers_count: 76544,
+                        flight_time: '00:55:00'
+                    }
+                ];
+
+                renderAirportData(sampleData);
+                totalPages = 5;
+                renderPagination();
+            }
+        });
+    </script>
+</body>
+</html>

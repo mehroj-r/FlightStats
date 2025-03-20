@@ -1,0 +1,10 @@
+asgiref==3.8.1
+Django==5.1.7
+django-debug-toolbar==5.0.1
+django-geojson==4.2.0
+djangorestframework==3.15.2
+GDAL @ file:///D:/Downloads/GDAL-3.10.1-cp313-cp313-win_amd64.whl#sha256=16d251039cff8b86020b3be514c4f25e1e4635a058c1e7c7e922293552f729ee
+numpy==2.2.4
+psycopg2==2.9.10
+sqlparse==0.5.3
+tzdata==2025.1
