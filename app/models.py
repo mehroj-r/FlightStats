@@ -47,6 +47,7 @@ class Flight(models.Model):
     def __str__(self):
         return f"Flight {self.flight_no} from {self.departure_airport} to {self.arrival_airport}"
 
+
 class BoardingPass(models.Model):
 
     ticket_no = models.ForeignKey('Ticket', on_delete=models.CASCADE, db_column='ticket_no')
@@ -97,3 +98,11 @@ class TicketFlight(models.Model):
 
     def __str__(self):
         return f"Ticket: {self.ticket_no}, Flight: {self.flight_id}, Fare Condition: {self.fare_condition}"
+
+class AirportDistance(models.Model):
+    departure_airport = models.ForeignKey(Airport, on_delete=models.CASCADE, related_name='departure_airport_distance')
+    arrival_airport = models.ForeignKey(Airport, on_delete=models.CASCADE, related_name='arrival_airport_distance')
+    distance_km = models.IntegerField()
+
+    def __str__(self):
+        return f"Distance from {self.departure_airport} to {self.arrival_airport}: {self.distance_km} km"

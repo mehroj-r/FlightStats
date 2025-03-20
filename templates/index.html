@@ -74,16 +74,12 @@
             let currentPage = 1;
             let pageSize = 10;
             let totalPages = 1;
-            let currentSortField = 'distance_km';
+            let currentSortField = '';
             let currentSortOrder = 'asc';
 
-            // Initialize date inputs with current date range (last 30 days)
-            const today = new Date();
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-
-            document.getElementById('to-date').value = formatDate(today);
-            document.getElementById('from-date').value = formatDate(thirtyDaysAgo);
+             // Initialize date inputs as empty
+            document.getElementById('to-date').value = "";
+            document.getElementById('from-date').value = "";
 
             // Fetch initial data
             fetchAirportList();
@@ -132,12 +128,12 @@
                         data.forEach(airport => {
                             const departureOption = document.createElement('option');
                             departureOption.value = airport.airport_code;
-                            departureOption.textContent = airport.airport_name['en'];
+                            departureOption.textContent = airport.airport_name;
                             departureDropdown.appendChild(departureOption);
 
                             const arrivalOption = document.createElement('option');
                             arrivalOption.value = airport.airport_code;
-                            arrivalOption.textContent = airport.airport_name['en'];
+                            arrivalOption.textContent = airport.airport_name;
                             arrivalDropdown.appendChild(arrivalOption);
                         });
                     })
@@ -191,16 +187,14 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    renderAirportData(data.results);
-                    totalPages = Math.ceil(data.count / pageSize);
+                    renderAirportData(data.flights);
+                    totalPages = data.total_pages;
                     renderPagination();
                     document.getElementById('loading').style.display = 'none';
                 })
                 .catch(error => {
                     console.error('Error fetching airport data:', error);
                     document.getElementById('loading').style.display = 'none';
-                    // For demo purposes, render sample data
-                    renderSampleData();
                 });
             }
 
@@ -246,7 +240,7 @@
                     row.appendChild(flightsTd);
 
                     const passengersTd = document.createElement('td');
-                    passengersTd.textContent = item.passengers_count.toLocaleString();
+                    passengersTd.textContent = item.passengers_count ? item.passengers_count.toLocaleString() : "0";
                     row.appendChild(passengersTd);
 
                     const timeTd = document.createElement('td');
@@ -312,56 +306,6 @@
                 return `${year}-${month}-${day}`;
             }
 
-
-            // For demo purposes - render sample data
-            function renderSampleData() {
-                const sampleData = [
-                    {
-                        departure_airport: 'Domodedovo International Airport',
-                        arrival_airport: 'Voronezh International Airport',
-                        distance_km: 345.77,
-                        flights_count: 393,
-                        passengers_count: 9085,
-                        flight_time: '00:35:00'
-                    },
-                    {
-                        departure_airport: 'Domodedovo International Airport',
-                        arrival_airport: 'Kursk East Airport',
-                        distance_km: 370.96,
-                        flights_count: 395,
-                        passengers_count: 8454,
-                        flight_time: '00:35:00'
-                    },
-                    {
-                        departure_airport: 'Domodedovo International Airport',
-                        arrival_airport: 'Belgorod International Airport',
-                        distance_km: 446.87,
-                        flights_count: 394,
-                        passengers_count: 24943,
-                        flight_time: '00:45:00'
-                    },
-                    {
-                        departure_airport: 'Domodedovo International Airport',
-                        arrival_airport: 'Bryansk Airport',
-                        distance_km: 459.77,
-                        flights_count: 786,
-                        passengers_count: 38045,
-                        flight_time: '00:30:00'
-                    },
-                    {
-                        departure_airport: 'Domodedovo International Airport',
-                        arrival_airport: 'Pulkovo Airport',
-                        distance_km: 942.00,
-                        flights_count: 791,
-                        passengers_count: 76544,
-                        flight_time: '00:55:00'
-                    }
-                ];
-
-                renderAirportData(sampleData);
-                totalPages = 5;
-                renderPagination();
-            }
         });
     </script>
 </body>
