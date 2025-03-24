@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.gis.db import models as gis_models
 
 class Aircraft(models.Model):
     aircraft_code = models.CharField(max_length=3, unique=True, primary_key=True)
@@ -12,9 +13,7 @@ class Airport(models.Model):
     airport_code = models.CharField(max_length=3, unique=True, primary_key=True)
     airport_name = models.JSONField()
     city = models.JSONField()
-
-    longitude = models.DecimalField(max_digits=20, decimal_places=17)
-    latitude = models.DecimalField(max_digits=20, decimal_places=17)
+    coordinates = gis_models.PointField(null=True, blank=True)
     timezone = models.TextField()
 
     def __str__(self):
@@ -88,7 +87,7 @@ class Ticket(models.Model):
     contact_data = models.JSONField()
 
     def __str__(self):
-        return f"Ticket: {self.ticket_no}, Passenger: {self.passenger_name}, Flight: {self.flight}"
+        return f"Ticket: {self.ticket_no}, Passenger: {self.passenger_name}"
 
 class TicketFlight(models.Model):
     ticket_no = models.ForeignKey(Ticket, on_delete=models.CASCADE, db_column='ticket_no')
@@ -98,11 +97,3 @@ class TicketFlight(models.Model):
 
     def __str__(self):
         return f"Ticket: {self.ticket_no}, Flight: {self.flight_id}, Fare Condition: {self.fare_condition}"
-
-class AirportDistance(models.Model):
-    departure_airport = models.ForeignKey(Airport, on_delete=models.CASCADE, related_name='departure_airport_distance')
-    arrival_airport = models.ForeignKey(Airport, on_delete=models.CASCADE, related_name='arrival_airport_distance')
-    distance_km = models.IntegerField()
-
-    def __str__(self):
-        return f"Distance from {self.departure_airport} to {self.arrival_airport}: {self.distance_km} km"

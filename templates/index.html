@@ -125,7 +125,7 @@
                         arrivalDropdown.innerHTML = '<option value="">All Airports</option>';
 
                         // Add options for each airport
-                        data.results.forEach(airport => {
+                        data.forEach(airport => {
                             const departureOption = document.createElement('option');
                             departureOption.value = airport.airport_code;
                             departureOption.textContent = airport.airport_name;

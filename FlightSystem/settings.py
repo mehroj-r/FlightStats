@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'django.contrib.gis',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -83,7 +84,7 @@ DATABASES = {
 
     'default': {
 
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'flight_db',
         'USER': 'postgres',
         'PASSWORD': '1649',
@@ -149,10 +150,6 @@ STATICFILES_DIRS = os.path.join(BASE_DIR, 'static'),
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Rest Framework settings
-REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 10
-}
 
 # Debug Toolbar settings
 INTERNAL_IPS = [
@@ -160,3 +157,6 @@ INTERNAL_IPS = [
     "127.0.0.1",
     # ...
 ]
+
+# GDAL settings'
+GDAL_LIBRARY_PATH = os.environ.get('GDAL_LIBRARY_PATH', r"C:\OSGeo4W\bin\gdal310.dll")

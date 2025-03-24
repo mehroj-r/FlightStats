@@ -30,16 +30,11 @@ class Command(BaseCommand):
             cursor.execute("SELECT airport_code, airport_name, city, coordinates, timezone FROM airports_data")
             for row in cursor.fetchall():
 
-                # Point field to be replaced with longitude and latitude
-                coordinates = row[3].strip('()')
-                x, y = coordinates.split(',')
-
                 Airport.objects.create(
                     airport_code=row[0],
                     airport_name=json.loads(row[1]),
                     city=json.loads(row[2]),
-                    longitude=Decimal(x),
-                    latitude=Decimal(y),
+                    coordinates=row[3],
                     timezone=row[4]
                 )
 
@@ -225,17 +220,68 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Ticket Flights data migration completed! {total_migrated} records migrated, {skipped_count} records skipped."))
 
+    def migrate_airport_coordinates(self):
+        from django.contrib.gis.geos import Point
+
+        with connections['demo'].cursor() as cursor:
+            cursor.execute("SELECT airport_code, coordinates FROM airports_data")
+            for row in cursor.fetchall():
+                try:
+                    airport = Airport.objects.get(airport_code=row[0])
+
+                    # Check if coordinates is a string that needs to be parsed as JSON
+                    coordinates_data = row[1]
+                    if isinstance(coordinates_data, str):
+                        try:
+                            # Try to parse as JSON if it's a string
+                            coordinates_json = json.loads(coordinates_data)
+                            # Extract lat/lon from the parsed JSON
+                            lat = float(coordinates_json.get('lat', coordinates_json.get('latitude')))
+                            lon = float(coordinates_json.get('lon', coordinates_json.get('lng', coordinates_json.get(
+                                'longitude'))))
+                        except json.JSONDecodeError:
+                            # If not valid JSON, check if it's a lat,lon string
+                            parts = coordinates_data.split(',')
+                            if len(parts) == 2:
+                                lat = float(parts[0].strip().strip('('))
+                                lon = float(parts[1].strip().strip(')'))
+                            else:
+                                self.stdout.write(self.style.WARNING(f"Skipping {row[0]}: Invalid coordinates format"))
+                                continue
+                    # If it's already a dict-like object
+                    elif hasattr(coordinates_data, 'get'):
+                        lat = float(coordinates_data.get('lat', coordinates_data.get('latitude')))
+                        lon = float(
+                            coordinates_data.get('lon', coordinates_data.get('lng', coordinates_data.get('longitude'))))
+                    else:
+                        self.stdout.write(self.style.WARNING(f"Skipping {row[0]}: Unknown coordinates format"))
+                        continue
+
+                    # Create a Point object for GeoDjango
+                    point = Point(lon, lat)  # Note: Point takes (longitude, latitude)
+                    airport.coordinates = point
+                    airport.save()
+                    self.stdout.write(f"Updated coordinates for {row[0]}")
+
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"Error updating {row[0]}: {str(e)}"))
+
+        self.stdout.write(self.style.SUCCESS("Airport coordinates migration completed!"))
+
+
+
 
     def handle(self, *args, **kwargs):
 
-        self.migrate_aircrafts()
-        self.migrate_airports()
-        self.migrate_bookings()
-        self.migrate_tickets()
-        self.migrate_flights()
-        self.migrate_seats()
-        self.migrate_boardpasses()
-        self.migrate_ticketflights()
+        # self.migrate_aircrafts()
+        # self.migrate_airports()
+        # self.migrate_bookings()
+        # self.migrate_tickets()
+        # self.migrate_flights()
+        # self.migrate_seats()
+        # self.migrate_boardpasses()
+        # self.migrate_ticketflights()
+        self.migrate_airport_coordinates()
 
 
         self.stdout.write(self.style.SUCCESS("Data migration completed!"))

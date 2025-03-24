@@ -1,14 +1,13 @@
-import math
-from datetime import timedelta
-from pprint import pprint
-
-from django.db.models import ExpressionWrapper, DurationField, F, Subquery, OuterRef, Count, Q
+from django.contrib.gis.db.models.functions import Distance
+from django.db.models import ExpressionWrapper, DurationField, F, Subquery, OuterRef, Count, Q, FloatField, Min, Avg, \
+    Value, IntegerField
 from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast
 
 from rest_framework import permissions, generics, status, pagination
 from rest_framework.response import Response
 
-from app.models import Airport, Flight, TicketFlight, AirportDistance
+from app.models import Airport, Flight, TicketFlight
 from .serializers import AirportSerializer, AirportStatsResponseSerializer
 
 
@@ -57,10 +56,8 @@ class AirportStatisticsAPIView(generics.ListAPIView):
     def get_queryset(self):
 
         request = self.request
-
         data = request.query_params
 
-        # Pagination parameters
         sort_field = None
         sort_order = None
 
@@ -109,7 +106,6 @@ class AirportStatisticsAPIView(generics.ListAPIView):
                 .annotate(count=Count('id'))
                 .values('count')
             ),
-            # For flights_count - count flights between same airports
             flights_count=Subquery(
                 Flight.objects.filter(
                     departure_airport=OuterRef('departure_airport'),
@@ -119,11 +115,13 @@ class AirportStatisticsAPIView(generics.ListAPIView):
                 .annotate(count=Count('flight_id'))
                 .values('count')
             ),
-            distance_km=Subquery(
-                AirportDistance.objects.filter(
-                    departure_airport=OuterRef('departure_airport'),
-                    arrival_airport=OuterRef('arrival_airport')
-                ).values('distance_km')
+            # For flights_count - count flights between same airports
+            distance_km=Cast(
+                Distance(
+                    F('departure_airport__coordinates'),
+                    F('arrival_airport__coordinates')
+                ),
+                output_field=FloatField()
             )
         )
 
