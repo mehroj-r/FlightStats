@@ -13,16 +13,6 @@ class AirportSerializer(serializers.ModelSerializer):
         model = Airport
         fields = ('airport_name', 'airport_code')
 
-
-class AirportStatsPostSerializer(serializers.Serializer):
-    """ Serializer for post request of airport stats. """
-    page = serializers.IntegerField()
-    page_size = serializers.IntegerField()
-    sort_field = serializers.CharField(allow_blank=True, required=False)
-    sort_order = serializers.CharField()
-    filters = serializers.JSONField()
-
-
 class AirportStatsResponseSerializer(serializers.Serializer):
     """ Serializer for response of airport stats. """
     departure_airport = serializers.CharField(source='departure_airport_translated')

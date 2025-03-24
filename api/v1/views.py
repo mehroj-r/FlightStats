@@ -3,27 +3,27 @@ from datetime import timedelta
 from pprint import pprint
 
 from django.db.models import ExpressionWrapper, DurationField, F, Subquery, OuterRef, Count, Q
-from django.db.models.fields import IntegerField
 from django.db.models.fields.json import KeyTextTransform
-from django.templatetags.i18n import language
-from rest_framework import permissions, generics, status
+
+from rest_framework import permissions, generics, status, pagination
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from app.models import Airport, Flight, TicketFlight, AirportDistance
-from .serializers import AirportSerializer, AirportStatsPostSerializer, AirportStatsResponseSerializer
+from .serializers import AirportSerializer, AirportStatsResponseSerializer
 
 
 class AirportListAPIView(generics.ListAPIView):
     """
     API endpoint that allows airports to be viewed.
     """
-    # queryset = Airport.objects.all()
     serializer_class = AirportSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        lang = self.request.headers['Accept-Language'].split(';')[0].split(',')[1]
+        # Language extraction from request headers (default to 'en' if not found)
+        lang_header = self.request.headers.get('Accept-Language', '')
+        lang_parts = lang_header.split(';')[0].split(',')
+        lang = lang_parts[1] if len(lang_parts) > 1 else lang_parts[0] if lang_parts else 'en'
 
         # Annotate the queryset with the translated airport name
         airports = Airport.objects.all().annotate(
@@ -33,35 +33,51 @@ class AirportListAPIView(generics.ListAPIView):
 
         return airports
 
+class CustomPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 10
+
+    def get_paginated_response(self, data):
+        return Response({
+            'page': self.page.number,
+            'page_count': self.page.paginator.num_pages,
+            'results': data
+        })
 
 
-class AirportStatisticsAPIView(APIView):
+class AirportStatisticsAPIView(generics.ListAPIView):
     """
     API endpoint that allows airport statistics to be viewed.
     """
+    serializer_class = AirportStatsResponseSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CustomPagination
 
-    def process_statistics(self, data):
+    def get_queryset(self):
 
         request = self.request
 
+        data = request.query_params
+
         # Pagination parameters
-        page = data.get('page', 1)
-        page_size = data.get('page_size', 10)
         sort_field = None
+        sort_order = None
 
         if data.get('sort_field') != "":
             sort_field = data.get('sort_field')
-
-        sort_order = data.get('sort_order', 'asc')
-        filters = data.get('filters', {})
+            sort_order = data.get('sort_order', 'asc')
 
         # Filters
-        arrival_airport = filters.get('arrival_airport', None)
-        departure_airport = filters.get('departure_airport', None)
-        from_date = filters.get('from_date', None)
-        to_date = filters.get('to_date', None)
-        lang = request.headers['Accept-Language'].split(';')[0].split(',')[1]
+        arrival_airport = data.get('arrival_airport', None)
+        departure_airport = data.get('departure_airport', None)
+        from_date = data.get('from_date', None)
+        to_date = data.get('to_date', None)
+
+        # Language extraction from request headers (default to 'en' if not found)
+        lang_header = request.headers.get('Accept-Language', '')
+        lang_parts = lang_header.split(';')[0].split(',')
+        lang = lang_parts[1] if len(lang_parts) > 1 else lang_parts[0] if lang_parts else 'en'
 
         # Initialize a Q object
         query = Q()
@@ -77,10 +93,6 @@ class AirportStatisticsAPIView(APIView):
             query &= Q(scheduled_departure__lte=to_date)
 
         flights = Flight.objects.filter(query)
-
-        total_flights = flights.count()
-        total_pages = math.ceil(total_flights / page_size)
-
 
         flights = flights.annotate(
             departure_airport_translated=KeyTextTransform(lang, F('departure_airport__airport_name')),
@@ -116,27 +128,11 @@ class AirportStatisticsAPIView(APIView):
         )
 
         # If sort_field is not None, sort the queryset
-        if sort_field:
+        if sort_field and sort_order:
             flights = flights.order_by(sort_field)
 
             # If sort_order is 'desc', reverse the order
             if sort_order == 'desc':
                 flights = flights.reverse()
 
-        return {
-            "total_pages": total_pages,
-            "current_page": page,
-            "page_size": page_size,
-            "flights": AirportStatsResponseSerializer(flights[page_size*(page-1): page_size* page], many=True).data
-        }
-
-
-    def post(self, request):
-
-        pprint(request.data)
-
-        serializer = AirportStatsPostSerializer(data=request.data)
-        if serializer.is_valid():
-            stats = self.process_statistics(serializer.validated_data)
-            return Response(stats, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return flights

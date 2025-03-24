@@ -125,7 +125,7 @@
                         arrivalDropdown.innerHTML = '<option value="">All Airports</option>';
 
                         // Add options for each airport
-                        data.forEach(airport => {
+                        data.results.forEach(airport => {
                             const departureOption = document.createElement('option');
                             departureOption.value = airport.airport_code;
                             departureOption.textContent = airport.airport_name;
@@ -142,7 +142,7 @@
                     });
             }
 
-            // Function to fetch airport data
+            // Function to fetch airport data using GET
             function fetchAirportData() {
                 const departureAirport = document.getElementById('departure-airport').value;
                 const arrivalAirport = document.getElementById('arrival-airport').value;
@@ -151,44 +151,38 @@
 
                 document.getElementById('loading').style.display = 'block';
 
-                // Construct request body with filters and pagination
-                const requestBody = {
-                    page: currentPage,
-                    page_size: pageSize,
-                    sort_field: currentSortField,
-                    sort_order: currentSortOrder,
-                    filters: {}
-                };
+                // Build query parameters for GET request
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('page_size', pageSize);
 
-                // Add filters only if they're set
+                if (currentSortField) {
+                    params.append('sort_field', currentSortField);
+                    params.append('sort_order', currentSortOrder);
+                }
+
                 if (departureAirport) {
-                    requestBody.filters.departure_airport = departureAirport;
+                    params.append('departure_airport', departureAirport);
                 }
 
                 if (arrivalAirport) {
-                    requestBody.filters.arrival_airport = arrivalAirport;
+                    params.append('arrival_airport', arrivalAirport);
                 }
 
                 if (fromDate) {
-                    requestBody.filters.from_date = fromDate;
+                    params.append('from_date', fromDate);
                 }
 
                 if (toDate) {
-                    requestBody.filters.to_date = toDate;
+                    params.append('to_date', toDate);
                 }
 
-                fetch(`${API_BASE_URL}/airport-statistics/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken() // Important for Django's CSRF protection
-                    },
-                    body: JSON.stringify(requestBody)
-                })
+                // Make GET request with query parameters
+                fetch(`${API_BASE_URL}/airport-statistics/?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
-                    renderAirportData(data.flights);
-                    totalPages = data.total_pages;
+                    renderAirportData(data.results);
+                    totalPages = data.page_count;
                     renderPagination();
                     document.getElementById('loading').style.display = 'none';
                 })
@@ -196,23 +190,6 @@
                     console.error('Error fetching airport data:', error);
                     document.getElementById('loading').style.display = 'none';
                 });
-            }
-
-            // Function to get CSRF token from cookies (for Django)
-            function getCsrfToken() {
-                const name = 'csrftoken';
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
             }
 
             // Function to render airport data
@@ -297,15 +274,6 @@
                 });
                 paginationDiv.appendChild(nextButton);
             }
-
-            // Helper function to format date as YYYY-MM-DD
-            function formatDate(date) {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-
         });
     </script>
 </body>

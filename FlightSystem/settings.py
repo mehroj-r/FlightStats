@@ -149,7 +149,10 @@ STATICFILES_DIRS = os.path.join(BASE_DIR, 'static'),
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Rest Framework settings
-
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 10
+}
 
 # Debug Toolbar settings
 INTERNAL_IPS = [
