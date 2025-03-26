@@ -30,6 +30,7 @@ class Flight(models.Model):
 
     flight_id = models.IntegerField(unique=True, primary_key=True)
     flight_no = models.CharField(max_length=6)
+    ticket = models.ManyToManyField('Ticket', through='TicketFlight', related_name='flights')
 
     scheduled_departure = models.DateTimeField()
     scheduled_arrival = models.DateTimeField()

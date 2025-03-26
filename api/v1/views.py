@@ -1,6 +1,9 @@
+from pprint import pprint
+
 from django.contrib.gis.db.models.functions import Distance
+from django.db import connection
 from django.db.models import ExpressionWrapper, DurationField, F, Subquery, OuterRef, Count, Q, FloatField, Min, Avg, \
-    Value, IntegerField
+    Value, IntegerField, Prefetch
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast
 
@@ -28,7 +31,7 @@ class AirportListAPIView(generics.ListAPIView):
         airports = Airport.objects.all().annotate(
             airport_name_translated=KeyTextTransform(lang, F('airport_name')),
             city_translated=KeyTextTransform(lang, F('city')),
-        )
+        ).order_by('airport_name')
 
         return airports
 
@@ -89,7 +92,9 @@ class AirportStatisticsAPIView(generics.ListAPIView):
         if to_date:
             query &= Q(scheduled_departure__lte=to_date)
 
-        flights = Flight.objects.filter(query)
+        flights = Flight.objects.filter(query).prefetch_related(
+            'departure_airport', 'arrival_airport',
+        )
 
         flights = flights.annotate(
             departure_airport_translated=KeyTextTransform(lang, F('departure_airport__airport_name')),
