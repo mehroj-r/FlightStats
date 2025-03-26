@@ -10,7 +10,7 @@ class Aircraft(models.Model):
         return self.aircraft_code
 
 class Airport(models.Model):
-    airport_code = models.CharField(max_length=3, unique=True, primary_key=True)
+    airport_code = models.CharField(max_length=3, primary_key=True, null=False, blank=False)
     airport_name = models.JSONField()
     city = models.JSONField()
     coordinates = gis_models.PointField(null=True, blank=True)
