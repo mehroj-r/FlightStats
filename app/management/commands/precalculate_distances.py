@@ -3,8 +3,6 @@ import math
 
 from django.core.management.base import BaseCommand
 
-from app.models import Airport, AirportDistance
-
 
 class Command(BaseCommand):
     help = "Sync data from old DB to new DB"
