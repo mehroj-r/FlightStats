@@ -21,7 +21,6 @@ class Airport(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['airport_code']),
-            gis_models.Index(fields=['coordinates'], name='idx_airport_coordinates', opclasses=['gist'])
         ]
 
     def __str__(self):
@@ -38,7 +37,9 @@ class Flight(models.Model):
 
     flight_id = models.IntegerField(unique=True, primary_key=True)
     flight_no = models.CharField(max_length=6, db_index=True)
+
     ticket = models.ManyToManyField('Ticket', through='TicketFlight', related_name='flights', db_index=True)
+    passenger_count = models.IntegerField(default=0)
 
     scheduled_departure = models.DateTimeField()
     scheduled_arrival = models.DateTimeField()
@@ -57,9 +58,6 @@ class Flight(models.Model):
             models.Index(fields=['departure_airport', 'arrival_airport']),
             models.Index(fields=['departure_airport_id']),
             models.Index(fields=['arrival_airport_id']),
-            models.Index(fields=['scheduled_departure', 'scheduled_arrival']),
-            models.Index(fields=['status']),
-            models.Index(fields=['flight_no']),
         ]
 
     def __str__(self):
@@ -119,7 +117,6 @@ class TicketFlight(models.Model):
         indexes = [
             # Composite index for faster joins and filtering
             models.Index(fields=['ticket_no', 'flight_id']),
-            models.Index(fields=['fare_condition']),
         ]
 
     def __str__(self):

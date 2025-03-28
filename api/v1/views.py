@@ -1,18 +1,14 @@
-from pprint import pprint
-
 from django.contrib.gis.db.models.functions import Distance
-from django.core.paginator import Paginator
-from django.db import connection, models
-from django.db.models import ExpressionWrapper, DurationField, F, Subquery, OuterRef, Count, Q, FloatField, Min, Avg, \
-    Value, IntegerField, Prefetch
-from django.db.models.expressions import RawSQL
-from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast, Concat, Coalesce
 
-from rest_framework import permissions, generics, status, pagination
+from django.db import models
+from django.db.models import ExpressionWrapper, DurationField, F, Count, Q, FloatField, Avg, Value, Sum
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast, Concat
+
+from rest_framework import permissions, generics
 from rest_framework.response import Response
 
-from app.models import Airport, Flight, TicketFlight
+from app.models import Airport, Flight
 from .serializers import AirportSerializer, AirportStatsResponseSerializer
 
 
@@ -135,12 +131,8 @@ class AirportStatisticsAPIView(generics.ListAPIView):
             ),
 
             # Total passengers
-            passengers_count=Count('ticketflight__ticket_no', distinct=True),
-            # passengers_count= Count('ticket', distinct=True),
+            passengers_count=Sum('passenger_count'),
 
-            # passengers_count=Cast(
-            #     1, output_field=IntegerField()
-            # ),
             # Total flights
             flights_count=Count('flight_id', distinct= True),
 
