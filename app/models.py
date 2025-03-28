@@ -121,3 +121,22 @@ class TicketFlight(models.Model):
 
     def __str__(self):
         return f"Ticket: {self.ticket_no}, Flight: {self.flight_id}, Fare Condition: {self.fare_condition}"
+
+class AirportStats(models.Model):
+    flight_id = models.CharField(primary_key=True)
+
+    departure_airport_id = models.CharField(max_length=3)
+    arrival_airport_id = models.CharField(max_length=3)
+
+    departure_airport_name = models.JSONField()
+    arrival_airport_name = models.JSONField()
+
+    flight_time = models.DurationField()
+
+    passengers_count = models.IntegerField()
+    flights_count = models.IntegerField()
+    distance_km = models.FloatField()
+
+    class Meta:
+        managed = False
+        db_table = 'airport_stats'

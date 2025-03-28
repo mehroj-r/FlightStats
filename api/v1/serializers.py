@@ -15,7 +15,7 @@ class AirportSerializer(serializers.ModelSerializer):
 
 class AirportStatsResponseSerializer(serializers.Serializer):
     """ Serializer for response of airport stats. """
-    flight_id = serializers.CharField(source='new_flight_id')
+    flight_id = serializers.CharField()
     departure_airport = serializers.CharField(source='departure_airport_translated')
     arrival_airport = serializers.CharField(source='arrival_airport_translated')
     distance_km = serializers.IntegerField()
