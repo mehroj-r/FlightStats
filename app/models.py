@@ -138,5 +138,4 @@ class AirportStats(models.Model):
     distance_km = models.FloatField()
 
     class Meta:
-        managed = False
         db_table = 'airport_stats'
