@@ -1,3 +1,10 @@
 /.venv/
 /.idea/
 /db.sql
+app/migrations/
+FlightSystem/__pycache__/
+api/__pycache__/
+api/v1/__pycache__/
+app/__pycache__/
+app/management/__pycache__/
+app/management/commands/__pycache__/

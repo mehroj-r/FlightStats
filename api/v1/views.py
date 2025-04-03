@@ -1,14 +1,13 @@
 
-from django.contrib.gis.db.models.functions import Distance
-
 from django.db import models
-from django.db.models import ExpressionWrapper, DurationField, F, Count, Q, FloatField, Avg, Value, Sum
+from django.db.models import F
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Concat
+from django.utils.translation import get_language
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import permissions, generics
-from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from app.filters import AirportStatsFilter
@@ -24,10 +23,10 @@ class AirportListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Language extraction from request headers (default to 'en' if not found)
-        lang_header = self.request.headers.get('Accept-Language', '')
-        lang_parts = lang_header.split(';')[0].split(',')
-        lang = lang_parts[1] if len(lang_parts) > 1 else lang_parts[0] if lang_parts else 'en'
+        lang = get_language()
+
+        if '-' in lang:
+            lang = lang.split('-')[0]
 
         # Annotate the queryset with the translated airport name
         airports = Airport.objects.all().annotate(
@@ -72,9 +71,10 @@ class AirportStatisticsAPIView(generics.ListAPIView):
             sort_order = data.get('sort_order', 'asc')
 
         # Language extraction from request headers (default to 'en' if not found)
-        lang_header = request.headers.get('Accept-Language', '')
-        lang_parts = lang_header.split(';')[0].split(',')
-        lang = lang_parts[1] if len(lang_parts) > 1 else lang_parts[0] if lang_parts else 'en'
+        lang = get_language()
+
+        if '-' in lang:
+            lang = lang.split('-')[0]
 
         airport_stats = AirportStats.objects.all().annotate(
 
